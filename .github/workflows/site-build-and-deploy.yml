@@ -67,11 +67,15 @@ jobs:
         run: |
           rm -rf .git
           cp -R ./site_framework/* ./
-          cp -R ./site_data_redebug/* ./
+          find site_data_redebug -type f -path '*annual-summary*' -exec rsync -Rav {} ./site_data_redebug_filtered \;
+          cp -R ./site_data_redebug_filtered/site_data_redebug/* ./
+          # use cp /. to copy .git folders, jekyll need this to find last modified date of posts
           cp -R ./site_data_venusie/. ./
           rm -rf ./site_framework
           rm -rf ./site_data_redebug
+          rm -rf ./site_data_redebug_filtered
           rm -rf ./site_data_venusie
+          find .
 
       - name: Setup Pages
         id: pages
