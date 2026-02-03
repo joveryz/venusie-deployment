@@ -113,3 +113,28 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [build, deploy]
+    if: always()
+    steps:
+      - name: Send Notification
+        run: |
+          status_icon() {
+            case "$1" in
+              success) echo "✅";;
+              failure) echo "❌";;
+              skipped) echo "⏭️";;
+              cancelled) echo "🚫";;
+              *) echo "$1";;
+            esac
+          }
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            curl -s "https://api.day.app/${{ secrets.BARK_TOKEN }}/Github-Venusie/%23${{ github.run_id }}%20%E2%9C%85"
+          else
+            BUILD=$(status_icon "${{ needs.build.result }}")
+            DEPLOY=$(status_icon "${{ needs.deploy.result }}")
+            BODY=$(echo "#${{ github.run_id }} ❌ (Build:${BUILD} Deploy:${DEPLOY})" | jq -sRr @uri)
+            curl -s "https://api.day.app/${{ secrets.BARK_TOKEN }}/Github-Venusie/${BODY}"
+          fi
