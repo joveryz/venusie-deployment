@@ -22,7 +22,7 @@ permissions:
 # Allow one concurrent deployment
 concurrency:
   group: ${{ github.workflow }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -30,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           # submodules: true
@@ -38,7 +38,7 @@ jobs:
           # (See: https://github.com/cotes2020/chirpy-starter/tree/main/assets)
 
       - name: Checkout Framework
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: joveryz/jekyll-theme-chirpy
           ref: dev
@@ -46,7 +46,7 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Site Data redebug-data
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: joveryz/redebug-data
           ref: master
@@ -55,13 +55,21 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Site Data venusie-data
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: joveryz/venusie-data
           ref: master
           token: ${{ secrets.PAT }}
           path: ./site_data_venusie
           fetch-depth: 0
+
+      - name: Generate dynamic content
+        shell: pwsh
+        run: |
+          Get-ChildItem ./site_data_redebug/tools -Filter *.ps1 | Sort-Object Name | ForEach-Object {
+            Write-Host "Running $($_.Name)"
+            & $_.FullName
+          }
 
       - name: Merge Framework and Data
         run: |
@@ -82,7 +90,7 @@ jobs:
 
       - name: Setup Pages
         id: pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v6
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -102,7 +110,7 @@ jobs:
             \-\-ignore-urls "/^http:\/\/127.0.0.1/,/^http:\/\/0.0.0.0/,/^http:\/\/localhost/"
 
       - name: Upload site artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: "_site${{ steps.pages.outputs.base_path }}"
 
@@ -115,4 +123,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
