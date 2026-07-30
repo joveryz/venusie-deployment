@@ -75,11 +75,24 @@ jobs:
         run: |
           rm -rf .git
           cp -R ./site_framework/* ./
-          while IFS= read -r key; do
-            echo "searching for shared post: $key"
-            find site_data_redebug -type f -path "*$key*" -exec rsync -Rav {} ./site_data_redebug_shared \;
-          done < site_data_redebug/_shared_posts
-          cp -R ./site_data_redebug_shared/site_data_redebug/* ./
+          mkdir -p ./site_data_redebug_shared
+          while IFS= read -r p; do
+            p="${p%$'\r'}"
+            case "$p" in ''|\#*) continue ;; esac
+            if [ ! -e "site_data_redebug/$p" ]; then
+              echo "::error::shared path not found: $p"; exit 1
+            fi
+            echo "sharing: $p"
+            rsync -Rav "site_data_redebug/./$p" ./site_data_redebug_shared/
+            # a _posts/*.md entry also pulls its image folder if present
+            case "$p" in
+              _posts/*.md)
+                img="assets/img/posts/$(basename "$p" .md)"
+                [ -d "site_data_redebug/$img" ] && rsync -Rav "site_data_redebug/./$img" ./site_data_redebug_shared/
+                ;;
+            esac
+          done < site_data_redebug/_shared
+          cp -R ./site_data_redebug_shared/. ./
           # use cp /. to copy .git folders, jekyll need this to find last modified date of posts
           cp -R ./site_data_venusie/. ./
           rm -rf ./site_framework
