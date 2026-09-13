@@ -144,6 +144,10 @@ jobs:
     if: always()
     steps:
       - name: Send Notification
+        env:
+          APPRISE_URL: ${{ secrets.APPRISE_URL }}
+          APPRISE_AUTH: ${{ secrets.APPRISE_AUTH }}
+          APPRISE_TAG: ${{ secrets.APPRISE_TAG }}
         run: |
           status_icon() {
             case "$1" in
@@ -155,10 +159,16 @@ jobs:
             esac
           }
           if [ "${{ needs.deploy.result }}" == "success" ]; then
-            curl -s "https://api.day.app/${{ secrets.BARK_TOKEN }}/Github-Venusie/%23${{ github.run_id }}%20%E2%9C%85"
+            BODY="#${{ github.run_id }} ✅"
+            TYPE="success"
           else
             BUILD=$(status_icon "${{ needs.build.result }}")
             DEPLOY=$(status_icon "${{ needs.deploy.result }}")
-            BODY=$(echo "#${{ github.run_id }} ❌ (Build:${BUILD} Deploy:${DEPLOY})" | jq -sRr @uri)
-            curl -s "https://api.day.app/${{ secrets.BARK_TOKEN }}/Github-Venusie/${BODY}"
+            BODY="#${{ github.run_id }} ❌ (Build:${BUILD} Deploy:${DEPLOY})"
+            TYPE="failure"
           fi
+          jq -n --arg body "$BODY" --arg type "$TYPE" --arg tag "$APPRISE_TAG" \
+            '{title: "Github-Venusie", body: $body, type: $type, format: "text", tag: $tag}' \
+            | curl -sS --fail-with-body -u "$APPRISE_AUTH" \
+                -H "Content-Type: application/json" \
+                --data-binary @- "$APPRISE_URL"
